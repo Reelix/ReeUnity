@@ -31,7 +31,6 @@ public class Creature : MonoBehaviour
     public AnimationClip idleAnimation;
     public AnimationClip attackAnimation;
     public AnimationClip deathAnimation;
-
     ModelOutline modelOutline;
 
     protected virtual void Start()
@@ -77,7 +76,7 @@ public class Creature : MonoBehaviour
 
     protected virtual void Update()
     {
-        if (!this.isAlive || animationController == null)
+        if (!isAlive || animationController == null)
         {
             return;
         }
@@ -96,7 +95,7 @@ public class Creature : MonoBehaviour
     {
         if (animationController[animationName] == null)
         {
-            Debug.LogWarning("The animation " + animationName + " does not exist!");
+            Debug.LogWarning("The animation " + animationName + " does not exist as part of the animation controller!");
             return;
         }
         animationController[animationName].speed = animationSpeed;
@@ -114,19 +113,19 @@ public class Creature : MonoBehaviour
         animationController.CrossFade(animationClip.name);
     }
 
-    public void AlterLife(int lifeValue, Vector3 hitDirection)
+    public void AlterLife(int lifeValue, Vector3 hitDirection = new Vector3())
     {
-        health = health + lifeValue;
+        health += lifeValue;
         if (health <= 0)
         {
-            isAlive = false;
             Die(hitDirection);
         }
     }
 
-    protected virtual void Die(Vector3 hitDirection)
+    protected virtual void Die(Vector3 hitDirection = new Vector3())
     {
         Debug.Log("I have died!");
+        isAlive = false;
         animationController.CrossFade(deathAnimation.name);
     }
 
@@ -148,6 +147,7 @@ public class Creature : MonoBehaviour
         }
         else
         {
+            Debug.LogError(name + " is not on a navMesh and will be deleted!");
             DestroyGameObject();
         }
     }
