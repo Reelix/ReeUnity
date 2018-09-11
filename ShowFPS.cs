@@ -1,17 +1,15 @@
-﻿using UnityEngine;
+using UnityEngine;
 using TMPro;
 
 public class ShowFPS : MonoBehaviour
 {
-    GameObject fpsLabel;
     TMP_Text labelText;
     float deltaTime = 0.0f;
     int cooldownTime = 0;
 
     void Start()
     {
-        fpsLabel = GameObject.Find("FPS");
-        labelText = fpsLabel.GetComponent<TMP_Text>();
+        labelText = gameObject.GetComponent<TMP_Text>();
     }
 
     void Update()
