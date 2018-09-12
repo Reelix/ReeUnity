@@ -6,6 +6,7 @@ namespace Assets.Scripts
 {
     public class GizmoDrawer
     {
+        // Thanks to https://github.com/Mckenon
         public static void DrawCircle(Color color, Transform transform, float radius)
         {
             Gizmos.color = color;
