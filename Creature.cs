@@ -1,19 +1,23 @@
-﻿using UnityEngine;
+using UnityEngine;
 using UnityEngine.AI;
 using ModelOutline = cakeslice.Outline; // 3D https://assetstore.unity.com/packages/vfx/shaders/fullscreen-camera-effects/outline-effect-78608
 
 public class Creature : MonoBehaviour
 {
+    public int ConnectionId = 0;
+
     [Header("Creature Stats")]
-    public string creatureName;
+    public string CreatureName;
 
-    public int health;
+    public int Health;
 
-    public int maxHealth;
+    public int MaxHealth;
 
-    public int mana;
+    public int Mana;
 
-    public int maxMana;
+    public int MaxMana;
+
+    public Vector3 SpawnLocation;
 
     public bool isAlive = true;
 
@@ -25,22 +29,30 @@ public class Creature : MonoBehaviour
 
     [Header("Creature Animations")]
     public GameObject modelParent; // The parent GameObject containing the bones and the base model
+
     public GameObject model; // The base model itself
-    Animation animationController;
+    private Animation animationController;
     public AnimationClip moveAnimation;
     public AnimationClip idleAnimation;
     public AnimationClip attackAnimation;
     public AnimationClip deathAnimation;
-    ModelOutline modelOutline;
+
+    private ModelOutline modelOutline;
+    // private ReeNet networkManager;
+
+    protected virtual void Awake()
+    {
+        navAgent = GetComponent<NavMeshAgent>();
+        // networkManager = GameObject.Find("ReeNet").GetComponent<ReeNet>();
+    }
 
     protected virtual void Start()
     {
-        navAgent = GetComponent<NavMeshAgent>();
         if (modelParent != null)
         {
             if (moveAnimation == null || idleAnimation == null || attackAnimation == null || deathAnimation == null)
             {
-                Debug.LogWarning("Warning: " + creatureName + " has insufficient animations set to assign an animation controller!");
+                Debug.LogWarning("Warning: " + CreatureName + " has insufficient animations set to assign an animation controller!");
             }
             else
             {
@@ -49,6 +61,7 @@ public class Creature : MonoBehaviour
                 attackAnimation.legacy = true;
                 deathAnimation.legacy = true;
                 animationController = modelParent.AddComponent<Animation>();
+                animationController.cullingType = AnimationCullingType.BasedOnRenderers;
                 animationController.AddClip(moveAnimation, moveAnimation.name);
                 animationController.AddClip(idleAnimation, idleAnimation.name);
                 animationController.AddClip(attackAnimation, attackAnimation.name);
@@ -72,6 +85,24 @@ public class Creature : MonoBehaviour
             modelOutline.color = 0;
             modelOutline.enabled = false;
         }
+
+        // Server only reads
+        if (!Application.isEditor)
+        {
+            InvokeRepeating("NetCode", 0f, 0.1f);
+        }
+    }
+
+    private void NetCode()
+    {
+        if (ConnectionId == 0)
+        {
+            return;
+        }
+        if (isAlive && IsMoving())
+        {
+            // networkManager.UpdateMovement(ConnectionId, transform.position);
+        }
     }
 
     protected virtual void Update()
@@ -81,11 +112,11 @@ public class Creature : MonoBehaviour
             return;
         }
 
-        if (!this.IsMoving() && !animationController.IsPlaying(idleAnimation.name) && !animationController.IsPlaying(attackAnimation.name))
+        if (!IsMoving() && !animationController.IsPlaying(idleAnimation.name) && !animationController.IsPlaying(attackAnimation.name))
         {
             PlayAnimation(idleAnimation);
         }
-        else if (this.IsMoving() && !animationController.IsPlaying(moveAnimation.name))
+        else if (IsMoving() && !animationController.IsPlaying(moveAnimation.name))
         {
             PlayAnimation(moveAnimation);
         }
@@ -115,8 +146,8 @@ public class Creature : MonoBehaviour
 
     public void AlterLife(int lifeValue, Vector3 hitDirection = new Vector3())
     {
-        health += lifeValue;
-        if (health <= 0)
+        Health += lifeValue;
+        if (Health <= 0)
         {
             Die(hitDirection);
         }
@@ -136,7 +167,8 @@ public class Creature : MonoBehaviour
 
     public void LookAt(Vector3 toLook)
     {
-        transform.LookAt(new Vector3(toLook.x, 0, toLook.z)); // 0 -> Don't want to tilt up and down :p
+        toLook.y = 0; // 0 -> Don't want to tilt up and down :p
+        transform.LookAt(toLook);
     }
 
     public void StopMoving()
@@ -152,10 +184,15 @@ public class Creature : MonoBehaviour
         }
     }
 
-    // Slow things apparently aren't really moving (This is since things slow down before they stop...)
+    public void SetDestination(Vector3 destination)
+    {
+        navAgent.isStopped = false;
+        navAgent.SetDestination(destination);
+    }
+
     public bool IsMoving()
     {
-        return (navAgent.velocity.magnitude > 1f);
+        return (navAgent.velocity.magnitude > 0f);
     }
 
     public void ToggleOutline()
@@ -169,4 +206,23 @@ public class Creature : MonoBehaviour
             Debug.LogError("You tried to outline a creature that has no outline!");
         }
     }
+
+    public void Spawn()
+    {
+        navAgent.enabled = false;
+        transform.position = SpawnLocation;
+        navAgent.enabled = true;
+    }
+
+    /*
+
+    Could never get this to work properly...
+
+    public List<object> GetNearbyObjects(float distance, Type someType)
+    {
+        string typeString = someType.ToString();
+        List<Collider> colliders = Physics.OverlapSphere(transform.position, distance).ToList();
+        colliders = colliders.Where(x => x.gameObject.GetComponent(Type.GetType(typeString)) != null).ToList();
+        return colliders.Select(x => (object)x.gameObject).ToList();
+    }*/
 }
